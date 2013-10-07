@@ -8,22 +8,16 @@ use Data::Dumper;
 #==========================================================================
 my %PACKAGES;
 my %SOURCE;
+my %THESE;
 my $THIS;
-
+my $LASTTHIS;
 our $VERSION = '0.001';
 
 sub import {
     my $class = shift;
     strict->import;
     warnings->import;
-    my @c = caller;
-    my $pkg = $c[0];
-    
-    open(my $fh, "<", $c[1])  or die "cannot open < $c[1]: $!";
-    my $data = do { local $/;<$fh>};
-    close $fh;
-    my @data = split /\n/, $data;
-    $SOURCE{$c[0]} = \@data;
+    my $pkg = caller;
     
     eval qq {
         package $pkg;
@@ -32,22 +26,30 @@ sub import {
     
     {
         no strict 'refs';
-        *{ $pkg . '::this'  } = \&this;
-        *{ $pkg . '::Object'  } = \&object;
+        *{   $pkg . '::this'    } = \&this;
+        *{   $pkg . '::Object'  } = \&object;
     }
 }
 
-sub this {$THIS}
+sub this {
+    my $c = (caller(1))[3];
+    if ($c =~ /__ANON__$/) {
+        return $THIS;
+    }
+    
+    $THIS = $THESE{$c} || $THIS;
+}
 
 sub object {
     my $const = shift;
     my $self = {};
     if (ref $const eq 'CODE') {
         $self->{constructor} = $const;
-    } elsif (ref $const){
+    } elsif (ref $const) {
         $self = $const;
     }
-    return bless $self, 'Joose::Object';
+    
+    $THESE{'Joose::Object'} = bless $self, 'Joose::Object';
 }
 
 package Joose::Attr {
@@ -61,7 +63,6 @@ package Joose::Attr {
             no strict 'refs';
             no warnings 'redefine';
             my $module = $pkg . '::' . $name;
-            my $warn = '$' . $pkg . '::SIG{__WARN__}';
             eval qq {
                 package $module;
                 use base 'Joose::Object';
@@ -81,11 +82,10 @@ package Joose::Attr {
 package Joose::Object {
     use Data::Dumper;
     use Carp;
-    
     my $ProtoSearch = sub {
         my $self = shift;
         my $method = shift;
-        my $proto = $THIS->{__proto__};
+        my $proto = $self->{__proto__};
         while ($proto) {
             if (my $found = $proto->{$method}){
                 return $found;
@@ -98,17 +98,28 @@ package Joose::Object {
     our $AUTOLOAD;
     sub AUTOLOAD : lvalue {
         my $self = shift;
+        
         my ($method) = ($AUTOLOAD =~ /([^:']+$)/);
         return if $method eq 'DESTROY';
-        $THIS = $self;
         ##what's being called?
         my $called = $self->{$method} || $ProtoSearch->($self,$method);
         if ( ref $called eq 'CODE' ) {
-            my @c = caller(0);
+            my @c = caller;
+            
+            if (!$SOURCE{$c[0]}) {
+                open(my $fh, "<", $c[1])  or die "cannot open < $c[1]: $!";
+                my $data = do { local $/;<$fh>};
+                close $fh;
+                my @data = split /\n/, $data;
+                $SOURCE{$c[0]} = \@data;
+            }
+            
             my $line = $SOURCE{$c[0]}->[$c[2] - 1];
             if (my $ok = $line eq 'ok' || $line =~ /$method\s*?\(/){
                 $SOURCE{$c[0]}->[$c[2] - 1] = 'ok' if !$ok;
                 my $ret;
+                my $oldthis = $THIS;
+                $THIS = $self;
                 my $error = do {
                     local $@;
                     eval {
@@ -116,17 +127,15 @@ package Joose::Object {
                     };
                     $@;
                 };
-                
+                $THIS = $oldthis;
                 if ($error){
                     Carp::croak $error;
                 }
                 return $ret;
             }
-            
         } elsif (ref $called eq 'HASH') {
-            $self->{$method} = bless {},ref $self;
+            $self->{$method} = bless $self->{$method},ref $self;
         }
-        
         $self->{$method} ||= $called;
     }
     
@@ -134,31 +143,48 @@ package Joose::Object {
         my $class = shift;
         my $n = {};
         $n->{__proto__} = $class;
-        $THIS = bless $n, ref $class;
+        my $oldthis = $THIS;
+        $THIS = $THESE{ref $class} = bless $n, ref $class;
         if (my $constructor = $n->{__proto__}->{constructor}) {
             $constructor->(@_);
         }
+        $THIS = $oldthis;
         return $n;
     }
     
     sub prototype : lvalue {
         my $self = shift;
+        if (@_) {
+            my $proto = shift;
+            $self->{__proto__} = $proto;
+        }
         $self->{__proto__};
+    }
+    
+    sub call {
+        my $self = shift;
+        my $parent = shift;
+        $THESE{ref $self} = $parent;
+        $self->constructor(@_);
     }
     
     sub instanceof {
         my $self = shift;
         my $class = shift;
-        return ref $self eq ref $class;
+        while ($self) {
+            if (ref $self eq ref $class) {
+                return 1;
+            }
+            
+            $self = $self->{__proto__};
+        }
+        
+        return 0;
     }
 }
-
 
 1;
 
 __END__
-
-
-
 
 

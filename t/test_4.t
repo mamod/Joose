@@ -22,9 +22,6 @@ sub Student : Object {}
 
 # inherit Person
 Student->prototype = Person->new;
-
-# correct the constructor pointer because it points to Person
-#Student->constructor = Student;
  
 # replace the sayHello method
 Student->sayHello = sub {
@@ -47,11 +44,6 @@ is($callCounter,3);
 # check inheritance
 ok ( $student1->instanceof(Student) ); # true
 ###############################################
-#ok ( $student1->instanceof(Person) ); # true
+ok ( $student1->instanceof(Person) ); # true
 
-
-
-
-
-
-done_testing(4);
+done_testing(5);
