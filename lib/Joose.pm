@@ -2,7 +2,6 @@ package Joose;
 use strict;
 use warnings;
 use Data::Dumper;
-
 #==========================================================================
 #globals
 #==========================================================================
@@ -10,15 +9,12 @@ my %PACKAGES;
 my %SOURCE;
 my %THESE;
 my $THIS;
-my $LASTTHIS;
 our $VERSION = '0.001';
-
 sub import {
     my $class = shift;
     strict->import;
     warnings->import;
     my $pkg = caller;
-    
     eval qq {
         package $pkg;
         use base 'Joose::Attr';
@@ -36,7 +32,6 @@ sub this {
     if ($c =~ /__ANON__$/) {
         return $THIS;
     }
-    
     $THIS = $THESE{$c} || $THIS;
 }
 
@@ -68,13 +63,11 @@ package Joose::Attr {
                 use base 'Joose::Object';
             };
             
-            $PACKAGES{$module} = bless({constructor => $code}, $module);
-            
+            $PACKAGES{$module} = bless( { constructor => $code }, $module);
             *{ $pkg . '::' . $name } = sub {
                 $PACKAGES{$module};
             };
         }
-        
         return ();
     }
 }
@@ -98,25 +91,38 @@ package Joose::Object {
     our $AUTOLOAD;
     sub AUTOLOAD : lvalue {
         my $self = shift;
-        
         my ($method) = ($AUTOLOAD =~ /([^:']+$)/);
         return if $method eq 'DESTROY';
-        ##what's being called?
         my $called = $self->{$method} || $ProtoSearch->($self,$method);
-        if ( ref $called eq 'CODE' ) {
-            my @c = caller;
-            
-            if (!$SOURCE{$c[0]}) {
-                open(my $fh, "<", $c[1])  or die "cannot open < $c[1]: $!";
-                my $data = do { local $/;<$fh>};
-                close $fh;
-                my @data = split /\n/, $data;
-                $SOURCE{$c[0]} = \@data;
+        
+        if ( ref $called eq 'CODE') {
+            my $runCode = 0;
+            my $want = wantarray;
+            if (!defined $want || @_){
+                $runCode = 1;
+            } else {
+                #now we are getting really dirty
+                #We don't know if we are trying to get or set functions here
+                #so we will read source and decide
+                #if there is parentheses then we are calling functions
+                #otherwise we will continue as usual to set the function
+                my @c = caller;
+                if (!$SOURCE{$c[1]}) {
+                    open(my $fh, "<", $c[1])  or die "cannot open < $c[1]: $!";
+                    my $data = do { local $/;<$fh>};
+                    close $fh;
+                    my @data = split /\n/, $data;
+                    $SOURCE{$c[1]} = \@data;
+                }
+                
+                my $line = $SOURCE{$c[1]}->[$c[2] - 1];
+                if (my $ok = $line eq 'ok' || $line =~ /$method\s*?\(/){
+                    $SOURCE{$c[1]}->[$c[2] - 1] = 'ok' if !$ok;
+                    $runCode = 1;
+                }
             }
             
-            my $line = $SOURCE{$c[0]}->[$c[2] - 1];
-            if (my $ok = $line eq 'ok' || $line =~ /$method\s*?\(/){
-                $SOURCE{$c[0]}->[$c[2] - 1] = 'ok' if !$ok;
+            if ($runCode) {
                 my $ret;
                 my $oldthis = $THIS;
                 $THIS = $self;
@@ -133,6 +139,7 @@ package Joose::Object {
                 }
                 return $ret;
             }
+            
         } elsif (ref $called eq 'HASH') {
             $self->{$method} = bless $self->{$method},ref $self;
         }
@@ -145,7 +152,7 @@ package Joose::Object {
         $n->{__proto__} = $class;
         my $oldthis = $THIS;
         $THIS = $THESE{ref $class} = bless $n, ref $class;
-        if (my $constructor = $n->{__proto__}->{constructor}) {
+        if ( my $constructor = $n->{__proto__}->{constructor} ) {
             $constructor->(@_);
         }
         $THIS = $oldthis;
@@ -175,10 +182,8 @@ package Joose::Object {
             if (ref $self eq ref $class) {
                 return 1;
             }
-            
             $self = $self->{__proto__};
         }
-        
         return 0;
     }
 }
@@ -187,4 +192,26 @@ package Joose::Object {
 
 __END__
 
+=head1 NAME
+
+Joose - A Perl Object System the javascript Way
+
+=head1 DESCRIPTION
+
+
+
+=head1 SYNOPSIS
+    
+    package TEST;
+    use Joose;
+    
+    sub Person : Object {
+        this->name = $_[0];
+    }
+    
+    Person->getName = sub {
+        return this->name;
+    };
+
+=head1 METHODS
 
