@@ -35,9 +35,9 @@ Student->sayGoodBye = sub {
 };
 
 my $student1 = Student->new();
-$student1->sayHello();
-$student1->walk();
-$student1->sayGoodBye();
+$student1->sayHello->();
+$student1->walk->();
+$student1->sayGoodBye->();
 
 is($callCounter,3);
 

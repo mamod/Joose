@@ -22,11 +22,11 @@ $Child1->height = 'h';
 $Child1->alert = sub {
     is(this->height,'h');
     is(scalar @{this->a},2);
-    this->childAlert();
-    this->superalert();
+    this->childAlert->();
+    this->superalert->();
 };
 
 my $child1 = Object $Child1;
-$child1->alert();
+$child1->alert->();
 
 done_testing(5);

@@ -3,7 +3,7 @@ use Test::More;
 
 sub Person : Object {
     this->cool = 1 if $_[0] eq 'First';
-    this->setName(@_);
+    this->setName->(@_);
 }
 
 Person->setName = sub {

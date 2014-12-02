@@ -17,7 +17,7 @@ my $n2 = $test->new(15);
 
 is ( $n->num, 5); #5
 
-my $ret = $n->anotherSay();
+my $ret = $n->anotherSay->();
 
 is ($ret, 'Hi there');
 

@@ -34,10 +34,10 @@ E->woo = sub {
 #Some tests
 my $a = A->new();
 
-is ($a->foo(),'a');
-is ($a->bar(), 'b');
-is ($a->baz(), 'c');
-is ($a->wee(),'d');
-is ($a->woo(),'e');
+is ($a->foo->(),'a');
+is ($a->bar->(), 'b');
+is ($a->baz->(), 'c');
+is ($a->wee->(),'d');
+is ($a->woo->(),'e');
 
 done_testing(5);

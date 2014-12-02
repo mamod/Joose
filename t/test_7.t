@@ -18,8 +18,8 @@ package TEST {
     my $Animal = Object sub {
         my $j = Jaguar->new();
         is (ref this, 'Joose::Object');
-        is ($j->getName(),'Jaguar');
-        this->setName(@_);
+        is ($j->getName->(),'Jaguar');
+        this->setName->(@_);
     };
     
     $Animal->setName = sub {
@@ -47,7 +47,7 @@ package TEST {
         is (ref this,'TEST::Tiger');
         is (ref this->name2,'CODE');
         is (ref $lion,'TEST::Lion');
-        this->name2();
+        this->name2->();
     }
     
     Tiger->name2 = sub {

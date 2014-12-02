@@ -22,7 +22,7 @@ sub Animal : Object {
 
 # methods
 Animal->run = sub {
-    return (this->toString() . " is running!");
+    return (this->toString->() . " is running!");
 };
 
 Animal->toString = sub {
@@ -33,7 +33,7 @@ Animal->toString = sub {
 # --------- the child object -----------
 sub Rabbit : Object {
     my ($name) = @_;
-    this->parent->constructor($name);
+    this->parent->constructor->($name);
 }
 
 # inherit
@@ -41,14 +41,14 @@ extend(Rabbit, Animal);
 
 #// override
 Rabbit->run = sub {
-    my $parentText = Rabbit->parent->run();
+    my $parentText = Rabbit->parent->run->();
     is ($parentText, 'Jumper is running!');
     return (this->name . " bounces high into the sky!");
 };
 
 my $rabbit = Rabbit->new('Jumper');
 
-my $text = $rabbit->run();
+my $text = $rabbit->run->();
 
 is ($text,'Jumper bounces high into the sky!');
 

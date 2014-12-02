@@ -94,52 +94,14 @@ package Joose::Object {
         my ($method) = ($AUTOLOAD =~ /([^:']+$)/);
         return if $method eq 'DESTROY';
         my $called = $self->{$method} || $ProtoSearch->($self,$method);
-        
         if ( ref $called eq 'CODE') {
-            my $runCode = 0;
-            my $want = wantarray;
-            if (!defined $want || @_){
-                $runCode = 1;
-            } else {
-                #now we are getting really dirty
-                #We don't know if we are trying to get or set functions here
-                #so we will read source and decide
-                #if there is parentheses then we are calling functions
-                #otherwise we will continue as usual to set the function
-                my @c = caller;
-                if (!$SOURCE{$c[1]}) {
-                    open(my $fh, "<", $c[1])  or die "cannot open < $c[1]: $!";
-                    my $data = do { local $/;<$fh>};
-                    close $fh;
-                    my @data = split /\n/, $data;
-                    $SOURCE{$c[1]} = \@data;
-                }
-                
-                my $line = $SOURCE{$c[1]}->[$c[2] - 1];
-                if (my $ok = $line eq 'ok' || $line =~ /$method\s*?\(/){
-                    $SOURCE{$c[1]}->[$c[2] - 1] = 'ok' if !$ok;
-                    $runCode = 1;
-                }
-            }
-            
-            if ($runCode) {
-                my $ret;
-                my $oldthis = $THIS;
+            my $OLDTHIS = $THIS;
+            $self->{$method} = sub {
                 $THIS = $self;
-                my $error = do {
-                    local $@;
-                    eval {
-                        $ret = $called->(@_);
-                    };
-                    $@;
-                };
-                $THIS = $oldthis;
-                if ($error){
-                    Carp::croak $error;
-                }
+                my $ret = $called->(@_);
+                $THIS = $OLDTHIS;
                 return $ret;
-            }
-            
+            };
         } elsif (ref $called eq 'HASH') {
             $self->{$method} = bless $self->{$method},ref $self;
         }
@@ -172,7 +134,7 @@ package Joose::Object {
         my $self = shift;
         my $parent = shift;
         $THESE{ref $self} = $parent;
-        $self->constructor(@_);
+        $self->constructor->(@_);
     }
     
     sub instanceof {
@@ -212,6 +174,46 @@ Joose - A Perl Object System the javascript Way
     Person->getName = sub {
         return this->name;
     };
-
+    
+    my $preson = Test::Person->new('me');
+    print $person->getName->(); ## = me
+    print $person->getName ## = returns sub ref
+    
 =head1 METHODS
 
+
+=head1 EXAMPLE
+
+    sub extend {
+        my ($b,$a,$t,$p) = @_;
+        $b->prototype = $a;
+        $a->call($t,@{$p});
+    }
+        
+    sub A : Object {
+        this->info1 = sub {
+            return("A");
+        };
+    }
+
+    sub B : Object {}
+    B->constructor = sub {
+        my ($p1,$p2) = @_;
+        extend(B,A,this);
+        this->info2 = sub {
+            return("B" . $p1  . $p2);
+        }
+    };
+
+    my $C; $C = Object sub {
+        my ($p) = @_;
+        extend($C,B,this,["1","2"]);
+        this->info3 = sub {
+            return("C" . $p);
+        };
+    };
+    
+    my $c = $C->new("c");
+    $c->info1->(); # A
+    $c->info2->(); # B12
+    $c->info3->(); # Cc

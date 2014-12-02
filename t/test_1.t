@@ -10,10 +10,10 @@ sub myObject : Object {
 }
 
 my $first = myObject->new('Mamod');
-my $firstname = $first->whoAmI();
+my $firstname = $first->whoAmI->();
 
 my $second = myObject->new('Mehyar');
-my $lastname = $second->whoAmI();
+my $lastname = $second->whoAmI->();
 
 
 is ($firstname, 'Mamod');

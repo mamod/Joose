@@ -24,13 +24,13 @@ Person->fullname = sub {
     return  this->firstname . ' ' . this->lastname;
 };
 
-my $firstname =  $person1->fname('Mamod');
-my $lastname = $person1->lname('Mehyar');
-my $fullname = $person1->fullname();
+my $firstname =  $person1->fname->('Mamod');
+my $lastname = $person1->lname->('Mehyar');
+my $fullname = $person1->fullname->();
 
-my $firstname2 =  $person2->fname('John');
-my $lastname2 = $person2->lname('Due');
-my $fullname2 = $person2->fullname();
+my $firstname2 =  $person2->fname->('John');
+my $lastname2 = $person2->lname->('Due');
+my $fullname2 = $person2->fullname->();
 
 is($firstname, 'Mamod');
 is($lastname, 'Mehyar');
@@ -45,5 +45,4 @@ is($person2->number, 2);
 is($person2->location, 'second');
 
 done_testing(10);
-
 

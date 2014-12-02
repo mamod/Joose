@@ -31,8 +31,8 @@ my $C; $C = Object sub {
 };
 
 my $c = $C->new("c");
-is ($c->info1(),'A'); # A
-is ($c->info2(), 'B12'); # B12
-is ($c->info3(),'Cc'); # Cc
+is ($c->info1->(),'A'); # A
+is ($c->info2->(), 'B12'); # B12
+is ($c->info3->(),'Cc'); # Cc
 
 done_testing(3);
